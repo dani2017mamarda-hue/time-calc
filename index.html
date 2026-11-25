@@ -1,0 +1,751 @@
+<!DOCTYPE html>
+<html lang="ka">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="დროის კალკულატორი" />
+  <title>დროის სხვაობის კალკულატორი</title>
+  <style>
+    /* ფერების პალიტრა - ზუსტად ფოტოზე ნაჩვენები მუქი გრაფიტისა და ფირუზისფერი ტონები */
+    :root {
+      --bg-main: #2d2f33;
+      --bg-header: #383b40;
+      --bg-card: #36393e;
+      --bg-input: #3c3f45;
+      --border-subtle: rgba(255, 255, 255, 0.14);
+      --border-focus: #1de9b6;
+      --accent: #1de9b6;
+      --accent-dark: #00bfa5;
+      --text-primary: #ffffff;
+      --text-secondary: #b0b5bd;
+      --text-muted: #848a94;
+      --ahead-bg: rgba(29, 233, 182, 0.14);
+      --ahead-text: #1de9b6;
+      --behind-bg: rgba(255, 138, 101, 0.16);
+      --behind-text: #ff8a65;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background-color: var(--bg-main);
+      color: var(--text-primary);
+      min-height: 100dvh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding-bottom: env(safe-area-inset-bottom, 20px);
+    }
+
+    /* ზედა ზოლი (App Bar) */
+    header {
+      width: 100%;
+      background-color: var(--bg-header);
+      padding: calc(env(safe-area-inset-top, 12px) + 14px) 18px 14px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.28);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+
+    header h1 {
+      font-size: 1.15rem;
+      font-weight: 600;
+      letter-spacing: 0.2px;
+      color: var(--text-primary);
+    }
+
+    .header-badge {
+      font-size: 0.72rem;
+      font-weight: 600;
+      color: var(--accent);
+      background: rgba(29, 233, 182, 0.12);
+      border: 1px solid rgba(29, 233, 182, 0.3);
+      padding: 4px 8px;
+      border-radius: 6px;
+    }
+
+    /* მთავარი კონტეინერი */
+    main {
+      width: 100%;
+      max-width: 480px;
+      padding: 18px 16px 28px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .section-subtitle {
+      color: var(--accent);
+      font-size: 1rem;
+      font-weight: 600;
+      margin-bottom: -4px;
+    }
+
+    /* დროის შესაყვანი ბლოკები */
+    .input-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .input-label-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .input-label {
+      font-size: 0.92rem;
+      font-weight: 500;
+      color: var(--text-primary);
+    }
+
+    .now-btn {
+      background: transparent;
+      border: 1px solid rgba(29, 233, 182, 0.35);
+      color: var(--accent);
+      font-size: 0.75rem;
+      font-weight: 500;
+      padding: 3px 9px;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+
+    .now-btn:active {
+      background: rgba(29, 233, 182, 0.18);
+    }
+
+    .time-box {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background-color: var(--bg-input);
+      border: 1.5px solid var(--border-subtle);
+      border-radius: 10px;
+      padding: 8px 10px;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+
+    .time-box:focus-within {
+      border-color: var(--border-focus);
+      box-shadow: 0 0 0 2px rgba(29, 233, 182, 0.15);
+    }
+
+    .time-field-wrap {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .time-input {
+      width: 100%;
+      background: transparent;
+      border: none;
+      outline: none;
+      color: var(--text-primary);
+      font-size: 1.45rem;
+      font-weight: 600;
+      text-align: center;
+      font-variant-numeric: tabular-nums;
+      padding: 4px 0;
+    }
+
+    .time-input::placeholder {
+      color: var(--text-secondary);
+      font-weight: 500;
+      opacity: 0.75;
+    }
+
+    .unit-hint {
+      font-size: 0.68rem;
+      color: var(--text-muted);
+      margin-top: -2px;
+      user-select: none;
+    }
+
+    .colon {
+      font-size: 1.4rem;
+      font-weight: 700;
+      color: var(--text-secondary);
+      padding: 0 4px 10px;
+      user-select: none;
+    }
+
+    /* მეორე დღეზე გადასვლის ჩამრთველი */
+    .options-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: 10px;
+      padding: 10px 12px;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .options-text {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .options-title {
+      font-size: 0.86rem;
+      font-weight: 500;
+      color: var(--text-primary);
+    }
+
+    .options-desc {
+      font-size: 0.72rem;
+      color: var(--text-secondary);
+    }
+
+    /* Toggle Switch */
+    .switch {
+      position: relative;
+      display: inline-block;
+      width: 44px;
+      height: 24px;
+      flex-shrink: 0;
+    }
+
+    .switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+
+    .slider {
+      position: absolute;
+      cursor: pointer;
+      inset: 0;
+      background-color: #52565e;
+      transition: 0.2s;
+      border-radius: 24px;
+    }
+
+    .slider:before {
+      position: absolute;
+      content: "";
+      height: 18px;
+      width: 18px;
+      left: 3px;
+      bottom: 3px;
+      background-color: white;
+      transition: 0.2s;
+      border-radius: 50%;
+    }
+
+    input:checked + .slider {
+      background-color: var(--accent-dark);
+    }
+
+    input:checked + .slider:before {
+      transform: translateX(20px);
+    }
+
+    /* მთავარი ღილაკები (გამოთვლა / გასუფთავება) */
+    .btn-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-top: 2px;
+    }
+
+    .action-btn {
+      border: none;
+      border-radius: 8px;
+      padding: 14px 12px;
+      font-size: 0.95rem;
+      font-weight: 700;
+      letter-spacing: 0.4px;
+      cursor: pointer;
+      transition: transform 0.1s, opacity 0.15s, background-color 0.15s;
+      text-transform: uppercase;
+    }
+
+    .action-btn:active {
+      transform: scale(0.98);
+    }
+
+    .btn-calc {
+      background-color: var(--accent);
+      color: #122622;
+      box-shadow: 0 3px 10px rgba(29, 233, 182, 0.25);
+    }
+
+    .btn-clear {
+      background-color: var(--accent-dark);
+      color: #ffffff;
+    }
+
+    /* შედეგების სექცია */
+    .result-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-top: 4px;
+    }
+
+    .result-title {
+      font-size: 1rem;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+
+    .copy-btn {
+      background: var(--bg-input);
+      border: 1px solid var(--border-subtle);
+      color: var(--text-secondary);
+      font-size: 0.78rem;
+      padding: 5px 10px;
+      border-radius: 7px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .copy-btn:active {
+      background: #484c54;
+      color: #fff;
+    }
+
+    /* წინ / უკან სტატუსის ბანერი */
+    .direction-banner {
+      border-radius: 10px;
+      padding: 10px 14px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      text-align: center;
+      background-color: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      color: var(--text-secondary);
+      transition: all 0.2s ease;
+    }
+
+    .direction-banner.ahead {
+      background-color: var(--ahead-bg);
+      border-color: rgba(29, 233, 182, 0.35);
+      color: var(--ahead-text);
+    }
+
+    .direction-banner.behind {
+      background-color: var(--behind-bg);
+      border-color: rgba(255, 138, 101, 0.35);
+      color: var(--behind-text);
+    }
+
+    /* შედეგის ბარათები */
+    .result-card {
+      background-color: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: 10px;
+      padding: 14px 10px;
+    }
+
+    .grid-3 {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      text-align: center;
+    }
+
+    .stat-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .stat-label {
+      font-size: 0.78rem;
+      font-weight: 600;
+      color: var(--accent);
+    }
+
+    .stat-value {
+      font-size: 1.55rem;
+      font-weight: 700;
+      color: var(--text-primary);
+      font-variant-numeric: tabular-nums;
+      letter-spacing: 0.5px;
+    }
+
+    /* შეტყობინება კოპირებისას */
+    .toast {
+      position: fixed;
+      bottom: calc(env(safe-area-inset-bottom, 16px) + 18px);
+      left: 50%;
+      transform: translateX(-50%) translateY(20px);
+      background: #181a1c;
+      color: var(--accent);
+      border: 1px solid rgba(29, 233, 182, 0.4);
+      padding: 9px 18px;
+      border-radius: 20px;
+      font-size: 0.85rem;
+      font-weight: 500;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s, transform 0.2s;
+      z-index: 50;
+      box-shadow: 0 6px 18px rgba(0, 0, 0, 0.4);
+    }
+
+    .toast.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ზედა სათაურის ზოლი -->
+  <header>
+    <h1>დროის სხვაობის კალკულატორი</h1>
+    <span class="header-badge">24 სთ</span>
+  </header>
+
+  <main>
+    <div class="section-subtitle">სხვაობა ორ დროს შორის</div>
+
+    <!-- საწყისი დრო -->
+    <div class="input-group">
+      <div class="input-label-row">
+        <label class="input-label" for="start-h">საწყისი დრო</label>
+        <button type="button" class="now-btn" onclick="setCurrentTime('start')">ახლანდელი დრო</button>
+      </div>
+      <div class="time-box">
+        <div class="time-field-wrap">
+          <input id="start-h" class="time-input" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="2" placeholder="სთ" aria-label="საწყისი საათი" />
+          <span class="unit-hint">საათი</span>
+        </div>
+        <span class="colon">:</span>
+        <div class="time-field-wrap">
+          <input id="start-m" class="time-input" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="2" placeholder="წთ" aria-label="საწყისი წუთი" />
+          <span class="unit-hint">წუთი</span>
+        </div>
+        <span class="colon">:</span>
+        <div class="time-field-wrap">
+          <input id="start-s" class="time-input" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="2" placeholder="00" aria-label="საწყისი წამი" />
+          <span class="unit-hint">წამი (არასავალდ.)</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- საბოლოო დრო -->
+    <div class="input-group">
+      <div class="input-label-row">
+        <label class="input-label" for="end-h">საბოლოო დრო</label>
+        <button type="button" class="now-btn" onclick="setCurrentTime('end')">ახლანდელი დრო</button>
+      </div>
+      <div class="time-box">
+        <div class="time-field-wrap">
+          <input id="end-h" class="time-input" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="2" placeholder="სთ" aria-label="საბოლოო საათი" />
+          <span class="unit-hint">საათი</span>
+        </div>
+        <span class="colon">:</span>
+        <div class="time-field-wrap">
+          <input id="end-m" class="time-input" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="2" placeholder="წთ" aria-label="საბოლოო წუთი" />
+          <span class="unit-hint">წუთი</span>
+        </div>
+        <span class="colon">:</span>
+        <div class="time-field-wrap">
+          <input id="end-s" class="time-input" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="2" placeholder="00" aria-label="საბოლოო წამი" />
+          <span class="unit-hint">წამი (არასავალდ.)</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ღამის 12 საათზე გადასვლის ოფცია -->
+    <label class="options-row" for="cross-midnight">
+      <div class="options-text">
+        <span class="options-title">მეორე დღეზე გადასვლა (შუაღამის შემდეგ)</span>
+        <span class="options-desc">ჩართეთ, თუ დრო 00:00-ს გადასცდა (მაგ. 23:00 → 01:30)</span>
+      </div>
+      <div class="switch">
+        <input type="checkbox" id="cross-midnight" onchange="calculateDifference()" />
+        <span class="slider"></span>
+      </div>
+    </label>
+
+    <!-- გამოთვლის და გასუფთავების ღილაკები -->
+    <div class="btn-row">
+      <button type="button" class="action-btn btn-calc" onclick="calculateDifference(true)">გამოთვლა</button>
+      <button type="button" class="action-btn btn-clear" onclick="clearAll()">გასუფთავება</button>
+    </div>
+
+    <!-- შედეგების ბლოკი -->
+    <div class="result-header">
+      <span class="result-title">შედეგი</span>
+      <button type="button" class="copy-btn" onclick="copyResult()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+          <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+        </svg>
+        კოპირება
+      </button>
+    </div>
+
+    <!-- სტატუსის ბანერი: წინ არის თუ უკან -->
+    <div id="direction-banner" class="direction-banner">
+      შეიყვანეთ საწყისი და საბოლოო დრო
+    </div>
+
+    <!-- საათი / წუთი / წამი -->
+    <div class="result-card">
+      <div class="grid-3">
+        <div class="stat-item">
+          <span class="stat-label">საათი</span>
+          <span id="res-hours" class="stat-value">00</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-label">წუთი</span>
+          <span id="res-minutes" class="stat-value">00</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-label">წამი</span>
+          <span id="res-seconds" class="stat-value">00</span>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <div id="toast" class="toast">შედეგი დაკოპირდა</div>
+
+  <script>
+    // ყველა შესაყვანი ველის თანმიმდევრობა სწრაფი ავტომატური გადასვლისთვის
+    const fieldOrder = ['start-h', 'start-m', 'start-s', 'end-h', 'end-m', 'end-s'];
+
+    /**
+     * ველების ინიციალიზაცია: ციფრების ფილტრაცია, ავტომატური გადასვლა შემდეგ ველზე და გამოთვლა
+     */
+    function initInputs() {
+      fieldOrder.forEach((id, index) => {
+        const el = document.getElementById(id);
+
+        el.addEventListener('input', (e) => {
+          // მხოლოდ ციფრების დატოვება
+          let clean = e.target.value.replace(/\D/g, '');
+          if (clean.length > 2) clean = clean.slice(0, 2);
+
+          // მაქსიმალური მნიშვნელობის შემოწმება (საათი <= 24, წუთი/წამი <= 59)
+          const num = parseInt(clean, 10);
+          if (!isNaN(num)) {
+            if (id.endsWith('-h') && num > 24) {
+              clean = '24';
+            } else if (!id.endsWith('-h') && num > 59) {
+              clean = '59';
+            }
+          }
+
+          e.target.value = clean;
+
+          // როცა 2 ციფრი შეივსება, ავტომატურად გადავიდეს შემდეგ ველზე
+          if (clean.length === 2) {
+            if (id === 'start-m' && !document.getElementById('start-s').value) {
+              document.getElementById('end-h').focus();
+            } else if (id === 'end-m') {
+              calculateDifference();
+            } else if (index < fieldOrder.length - 1) {
+              document.getElementById(fieldOrder[index + 1]).focus();
+            }
+          }
+
+          calculateDifference();
+        });
+
+        // Backspace-ზე წინა ველზე დაბრუნება თუ ველი ცარიელია
+        el.addEventListener('keydown', (e) => {
+          if (e.key === 'Backspace' && e.target.value === '' && index > 0) {
+            document.getElementById(fieldOrder[index - 1]).focus();
+          } else if (e.key === 'Enter') {
+            calculateDifference(true);
+            e.target.blur();
+          }
+        });
+
+        // ფოკუსის მოხსნისას ორნიშნა ფორმატის მიცემა (მაგ: 5 -> 05)
+        el.addEventListener('blur', (e) => {
+          if (e.target.value.length === 1) {
+            e.target.value = '0' + e.target.value;
+          }
+        });
+      });
+    }
+
+    /**
+     * მიმდინარე დროის ჩასმა საწყის ან საბოლოო ველში
+     */
+    function setCurrentTime(prefix) {
+      const now = new Date();
+      const h = String(now.getHours()).padStart(2, '0');
+      const m = String(now.getMinutes()).padStart(2, '0');
+      const s = String(now.getSeconds()).padStart(2, '0');
+
+      document.getElementById(`${prefix}-h`).value = h;
+      document.getElementById(`${prefix}-m`).value = m;
+      document.getElementById(`${prefix}-s`).value = s;
+
+      calculateDifference();
+    }
+
+    /**
+     * ველებიდან წამების ჯამური რაოდენობის წაკითხვა
+     */
+    function getSecondsFromGroup(prefix) {
+      const hVal = document.getElementById(`${prefix}-h`).value.trim();
+      const mVal = document.getElementById(`${prefix}-m`).value.trim();
+      const sVal = document.getElementById(`${prefix}-s`).value.trim();
+
+      if (hVal === '' && mVal === '' && sVal === '') {
+        return null;
+      }
+
+      const h = parseInt(hVal || '0', 10);
+      const m = parseInt(mVal || '0', 10);
+      const s = parseInt(sVal || '0', 10);
+
+      return h * 3600 + m * 60 + s;
+    }
+
+    /**
+     * ორ დროს შორის სხვაობის გამოთვლა
+     */
+    function calculateDifference(manualClick = false) {
+      const startSec = getSecondsFromGroup('start');
+      const endSec = getSecondsFromGroup('end');
+      const banner = document.getElementById('direction-banner');
+
+      if (startSec === null || endSec === null) {
+        if (manualClick) {
+          showToast('შეიყვანეთ საწყისი და საბოლოო დრო');
+        }
+        resetDisplayOnly();
+        return;
+      }
+
+      const crossMidnight = document.getElementById('cross-midnight').checked;
+      let diffSec = endSec - startSec;
+
+      if (crossMidnight && diffSec < 0) {
+        diffSec += 24 * 3600;
+      }
+
+      const absSec = Math.abs(diffSec);
+      const hours = Math.floor(absSec / 3600);
+      const minutes = Math.floor((absSec % 3600) / 60);
+      const seconds = absSec % 60;
+
+      // შედეგების ჩაწერა
+      document.getElementById('res-hours').textContent = String(hours).padStart(2, '0');
+      document.getElementById('res-minutes').textContent = String(minutes).padStart(2, '0');
+      document.getElementById('res-seconds').textContent = String(seconds).padStart(2, '0');
+
+      // სტატუსის განახლება (წინ არის / უკან არის / ემთხვევა)
+      banner.classList.remove('ahead', 'behind');
+      const humanText = formatHumanGeorgian(hours, minutes, seconds);
+
+      if (diffSec === 0) {
+        banner.textContent = 'დროები ზუსტად ემთხვევა ერთმანეთს (სხვაობა 0)';
+      } else if (diffSec > 0) {
+        banner.classList.add('ahead');
+        banner.textContent = `საბოლოო დრო წინ არის: +${humanText}`;
+      } else {
+        banner.classList.add('behind');
+        banner.textContent = `საბოლოო დრო უკან არის: -${humanText}`;
+      }
+    }
+
+    /**
+     * ტექსტური აღწერის ფორმირება (მაგ: "1 სთ 38 წთ")
+     */
+    function formatHumanGeorgian(h, m, s) {
+      const parts = [];
+      if (h > 0) parts.push(`${h} სთ`);
+      if (m > 0) parts.push(`${m} წთ`);
+      if (s > 0) parts.push(`${s} წმ`);
+      return parts.length > 0 ? parts.join(' ') : '0 წმ';
+    }
+
+    /**
+     * მხოლოდ შედეგის ეკრანის განულება
+     */
+    function resetDisplayOnly() {
+      document.getElementById('res-hours').textContent = '00';
+      document.getElementById('res-minutes').textContent = '00';
+      document.getElementById('res-seconds').textContent = '00';
+
+      const banner = document.getElementById('direction-banner');
+      banner.classList.remove('ahead', 'behind');
+      banner.textContent = 'შეიყვანეთ საწყისი და საბოლოო დრო';
+    }
+
+    /**
+     * ყველა ველისა და შედეგის სრული გასუფთავება
+     */
+    function clearAll() {
+      fieldOrder.forEach((id) => {
+        document.getElementById(id).value = '';
+      });
+      document.getElementById('cross-midnight').checked = false;
+      resetDisplayOnly();
+      document.getElementById('start-h').focus();
+    }
+
+    /**
+     * შედეგის კოპირება ბუფერში (iOS-თან თავსებადი მეთოდით)
+     */
+    function copyResult() {
+      const h = document.getElementById('res-hours').textContent;
+      const m = document.getElementById('res-minutes').textContent;
+      const s = document.getElementById('res-seconds').textContent;
+      const status = document.getElementById('direction-banner').textContent;
+
+      const textToCopy = `${status} (${h}:${m}:${s})`;
+
+      const tempInput = document.createElement('textarea');
+      tempInput.value = textToCopy;
+      tempInput.style.position = 'fixed';
+      tempInput.style.opacity = '0';
+      document.body.appendChild(tempInput);
+      tempInput.select();
+      try {
+        document.execCommand('copy');
+        showToast('შედეგი დაკოპირდა');
+      } catch (err) {
+        showToast('კოპირება ვერ მოხერხდა');
+      }
+      document.body.removeChild(tempInput);
+    }
+
+    let toastTimer;
+    function showToast(msg) {
+      const toast = document.getElementById('toast');
+      toast.textContent = msg;
+      toast.classList.add('show');
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => {
+        toast.classList.remove('show');
+      }, 2000);
+    }
+
+    window.addEventListener('DOMContentLoaded', initInputs);
+  </script>
+</body>
+</html>
